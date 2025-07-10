@@ -6,14 +6,18 @@ from PIL import Image
 import io
 from huggingface_hub import InferenceClient
 
+# Set path for pytesseract if using macOS (M1/M2)
+pytesseract.pytesseract.tesseract_cmd = "/opt/homebrew/bin/tesseract"
 
-HF_TOKEN = "your_huggingface_token_here"  
-HF_MODEL = "HuggingFaceH4/zephyr-7b-beta"
+# Hugging Face model setup
+HF_TOKEN = "your_huggingface_token_here"
+HF_MODEL = "mistralai/Mistral-7B-Instruct-v0.1"
 
 client = InferenceClient(model=HF_MODEL, token=HF_TOKEN)
+
 app = FastAPI()
 
-
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,6 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Confidence estimation from AI response
 def estimate_confidence(ai_response: str) -> int:
     response = ai_response.lower()
     if "definitely" in response or "clearly" in response:
@@ -35,37 +40,37 @@ def estimate_confidence(ai_response: str) -> int:
     else:
         return 50
 
+# Main API route
 @app.post("/validate-doc")
 async def validate_doc(file: UploadFile = File(...)):
     try:
-       
+        # Read uploaded image file
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
 
-        
+        # OCR extract text from image
         extracted_text = pytesseract.image_to_string(image)
 
-       
-        prompt = f"""
+        # Prepare prompt for AI
+        user_prompt = f"""
         You are a real estate document validator AI.
 
-        Analyze the OCR extracted text below and identify:
-        1. The document type (e.g., PAN Card, EC Certificate, Tax Receipt)
-        2. Whether it is valid or invalid
-        3. A short reason explaining the validation
-
-        OCR Text:
+        OCR Extracted Text:
         {extracted_text}
+
+        Based on the above text, answer:
+        1. What type of document is this? (e.g., PAN Card, EC, Tax Receipt)
+        2. Is this document valid or fake?
+        3. A short reason for your decision.
         """
 
-        
+        # Get AI response from Hugging Face
         response = client.text_generation(
-            prompt,
+            prompt=user_prompt,
             max_new_tokens=300,
             temperature=0.7,
         )
 
-        
         confidence = estimate_confidence(response)
 
         return JSONResponse({
@@ -75,4 +80,5 @@ async def validate_doc(file: UploadFile = File(...)):
         })
 
     except Exception as e:
+        print("Error occurred:", e)  # print full traceback in terminal
         return JSONResponse(status_code=500, content={"error": str(e)})
