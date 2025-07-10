@@ -1,6 +1,6 @@
-# 🏠 Estate DocuCheck AI
+# AI-Document Verification System
 
-An AI-powered real estate document validator that uses OCR and Hugging Face language models to identify and validate scanned property-related documents like PAN cards, Encumbrance Certificates, Tax Receipts, and more.
+An AI-powered document validator that uses OCR and Hugging Face language models to identify and validate scanned property-related documents like PAN cards, Encumbrance Certificates, Tax Receipts, and more.
 
 > 📌 Built using FastAPI, Tesseract OCR, and Hugging Face's Zephyr LLM.
 
